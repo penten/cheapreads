@@ -1,0 +1,6 @@
+{
+    "require": {
+        "exeu/apai-io": "~1.0",
+	"fabpot/goutte": "^3.2"
+    }
+}
