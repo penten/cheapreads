@@ -1,6 +1,7 @@
 {
     "require": {
         "exeu/apai-io": "~1.0",
-	"fabpot/goutte": "^3.2"
+	"fabpot/goutte": "^3.2",
+        "evernote/evernote-cloud-sdk-php": "dev-master"
     }
 }

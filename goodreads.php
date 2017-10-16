@@ -40,5 +40,17 @@ function getShelf($shelf) {
 		$page++;
 	} while(count($xml->reviews->review));
 
+	uasort($books, function($ba, $bb) { 
+		$a = $ba['read_dt']; $b = $bb['read_dt'];
+	       	return $a == $b ? 0 : ($a < $b ? 1 : -1); 
+	});
 	return $books;
 }
+
+/*
+$books = getShelf('read');
+foreach($books as $book) {
+	//	if($book['goodreads_id'] == '22814814') { print_r($book); }
+	print $book['title'] . "\n";
+}
+ */
