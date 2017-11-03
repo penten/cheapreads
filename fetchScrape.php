@@ -1,15 +1,16 @@
 <?php
 
 include 'vendor/autoload.php';
+include 'goodreads.php';
 
 use Goutte\Client;
 
-$rss = $argv[2];
 $to = $argv[1];
 
 // todo, store historical so we can only send where it has changed
 
 function findKindlePrice($client, $form, $isbn, $title) {
+	$r = false;
 	if($isbn) {
 		$url = "https://www.amazon.co.uk/whatever/dp/$isbn";
 		$r = extractKindlePrice($client, $url);
@@ -18,8 +19,12 @@ function findKindlePrice($client, $form, $isbn, $title) {
 	// could not find this isbn, or the kindle price
 	// try searching by name in case we can find the book under a different edition
 	if(!$r || @$r['price'] == 999999) {
-		$url = findKindleProductPage($client, $form, $title);
-		$r = extractKindlePrice($client, $url);
+		try {
+			$url = findKindleProductPage($client, $form, $title);
+			$r = extractKindlePrice($client, $url);
+		} catch (Exception $e) {
+			print "Unable to extract kindle URL from search results: probably captcherd";
+		}
 	}
 
 	return $r;
@@ -63,31 +68,31 @@ function extractKindlePrice($client, $page) {
 	return ["title" => $title, "price" => $price, "uri" => $canonical];
 }
 
-$xmlstr = file_get_contents($rss);
-$xml = new SimpleXMLElement($xmlstr);
-
 $client = new Client();
 $form = $client->request('GET', 'https://www.amazon.co.uk/Kindle-eBooks-books/b/ref=sv_kinc_1?ie=UTF8&node=341689031')
 		->evaluate("//form[contains(@class, 'nav-searchbar')]")->form();
 
 $data = [];
 
-foreach($xml->channel->item as $item) {
-	#	if($item->book_id != 28678856) continue;
-
+foreach(getShelf('to-read') as $book) {
 	$row = [
-		"gr_title" => (string)$item->title,
-		"gr_link" => "https://www.goodreads.com/book/show/" . (string)$item->book_id,
-		"gr_image" => (string)$item->book_small_image_url,
-		"gr_author" => (string)$item->author_name,
-		"gr_rating" => (string)$item->average_rating
+		"gr_title" => $book['title'],
+		"gr_link" => "https://www.goodreads.com/book/show/" . $book['goodreads_id'], 
+		"gr_image" => $book['image'],
+		"gr_author" => $book['author'],
+		"gr_rating" => $book['rating'],
 	];
 
-	$price = findKindlePrice($client, $form, $item->isbn, (string)$item->title);	
+	$price = findKindlePrice($client, $form, $book['isbn'], $book['title']);
 	if($price) {
 		$row["kindle_price"] = $price['price'];
 		$row["kindle_title"] = $price['title'];
 		$row["kindle_uri"] = $price['uri'];
+		print "Price found for " . $price['title'] . " -> " . $price['price'] . "\n";
+		sleep(3); // try to avoid being classed as a bot
+	} else {
+		print "No price found for " . $book['title'] . " -- captcha?\n";
+		break;
 	}
 
 	$data[] = $row;
@@ -103,8 +108,9 @@ function cmp($a, $b) {
 usort($data, 'cmp');
 
 // create email
-$intro = "Todo: store prices and price-drops at the top<br/>Todo: include a random quote from book quote files";
+$intro = "Todo: store prices and price-drops at the top<br/>Todo: include a random quote from book quote files<br/>Todo: pick up false matches, maybe include author name in search?";
 $html = "<html><body>$intro<table>";
+
 
 foreach($data as $row) {
 	$img = '<img src="' . $row['gr_image'] . '" />';
@@ -114,7 +120,8 @@ foreach($data as $row) {
 		} else {
 			$txt = '<b>£' . $row['kindle_price'] . '</b>';
 		}
-		$txt .= '<br/><a href="' .  $row['kindle_uri'] . '">' . $row['gr_title'] . '</a><br/>';
+		$txt .= '<br/><a href="' .  $row['kindle_uri'] . '">' . $row['kindle_title'] . '</a><br/>';
+		$txt .= '(' . $row['gr_title'] . ')<br/>';
 	} else {
 		$txt = "<b>Could not find price for this book</b><br/>" . $row['gr_title'] . '<br/>';
 	}
