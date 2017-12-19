@@ -4,6 +4,8 @@ require 'evernote.php';
 
 $wc = 0;
 $tag = $argv[1];
+$wc_fn = "/tmp/${tag}_evernote_wc";
+$previous_wc = file_get_contents($wc_fn);
 
 foreach(getTag($tag) as $scene) {
 	// Count only the scenes in the book, exclude notes
@@ -14,6 +16,14 @@ foreach(getTag($tag) as $scene) {
 }
 
 print "Total words: $wc\n";
+file_put_contents($wc_fn, $wc);
+
+if($previous_wc && $previous_wc == $wc) {
+	print "No change";
+	exit(1);
+}
+
+print "Uploading new WC";
 
 $event = $_SERVER['IFTTT_EVENT'];
 $key = $_SERVER['IFTTT_KEY'];
