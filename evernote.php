@@ -9,6 +9,7 @@ function noteToText($body) {
 	$raw_text = str_replace("\n\n", "\n", $raw_text);
 	$raw_text = str_replace("&nbsp;", " ", $raw_text);
 	$raw_text = html_entity_decode($raw_text, ENT_QUOTES | ENT_XML1, 'UTF-8');
+	$raw_text = str_replace("\xc2\xa0", " ", $raw_text);
 	return strip_tags($raw_text);
 }
 

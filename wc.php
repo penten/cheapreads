@@ -27,10 +27,24 @@ function recordIFTTT($event, $value) {
 
 	$context  = stream_context_create($options);
 	$result = file_get_contents($url, false, $context);
+	// print_r($http_response_header);
 	return json_decode($result);
 }
 
+// project journals
+foreach(getTag('nebulous') as $journal) {
+	$parts = explode(':', $journal['title']);
+	$token = $parts[0];
 
+	$raw_text = noteToText($journal['body']);
+	$wc = str_word_count($raw_text);
+
+	// Titles are like "neb_car: Buying a new car", that would send neb_car : $wc to IFTTT
+	print "Word count for journal ($token): $wc\n";
+	recordIFTTT($token, $wc);
+}
+
+// book
 foreach(getTag($tag) as $scene) {
 	// Count only the scenes in the book, exclude notes
 	if(strpos($scene['title'], 'Scene') !== false) {
